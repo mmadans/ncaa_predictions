@@ -62,10 +62,10 @@ Steps to optimize model performance:
 
 ## 📊 Results
 
-As of March 24, 2025, with results from the first two rounds of the Men's tournament and the first round + half of the second round of the Women's tournament, the model's Brier Score is **0.16412**. This is currently middle of the pack on the leaderboard.
+At the conclusion of the tournment, the model's Brier Score is **0.15852**. This result is around the 50th percentile on hte leaderboard.
 
 - **Context:** In 2023, the winning model had a slightly higher Brier Score, but performance typically declines in later rounds when matchups are more competitive.
-- **Observation:** My model tends to give conservative win probabilities for higher-seeded teams. In a tournament with fewer early upsets, this approach underperformed compared to more aggressive predictions.
+- **Observation:** My model tends to give conservative win probabilities for higher-seeded teams. In a tournament with fewer early upsets, and a very chalk 2nd weekend (only the second time in history all four #1 seeds made the Final Four), this approach underperformed compared to more aggressive predictions. 
 
 ---
 
