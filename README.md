@@ -15,20 +15,49 @@ The `submission.csv` file contains the final predictions submitted to the compet
 - `Pred`: A predicted win probability between 0 and 1 for Team 1.
 
 
-## 📘 Notebooks
+## 📘 Project Structure
 
-The repository contains two main notebooks that handle data processing, model training, and evaluation. These are adapted from my original Kaggle notebook, accessible [here](https://www.kaggle.com/code/michaelmadans/march-madness-predictions). Moving forward, I plan to use this repo to optimize the model pipeline for future competitions.
+The project has been refactored into a modular Python-based pipeline for better maintainability and clarity.
 
-1. **data_processing**
+### 📁 scripts/
+This directory contains the core logic of the prediction pipeline:
 
-   - Reads and transforms competition data.
-   - Performs feature engineering, including normalization, scaling, and generating efficiency metrics.
-   - Prepares the final training dataset from regular season data and test dataset from tournament results.
+*   **`preprocess.py`**: The primary entry point for data preparation. It orchestrates the entire processing flow, from raw CSV ingestion to feature-ready modeling datasets.
+*   **`train.py`**: The main modeling script. It handles league-specific training (Combined RS+Tourney for Men, Tourney-only for Women), model tuning, ensemble creation, and final prediction generation.
+*   **`data_loader.py`**: Contains utility functions for loading, cleaning, and combining raw NCAA datasets.
+*   **`feature_engineering.py`**: Houses the logic for complex transformations, including weighted averaging, multi-level normalization (opponent and home-court), and efficient rate calculation.
+*   **`model_utils.py`**: Provides helper functions for L1-based feature selection and model performance evaluation (Brier Score analysis).
+*   **`tuner.py`**: Encapsulates the hyperparameter optimization logic using `BayesSearchCV`.
+*   **`predictor.py`**: Manages the generation of win probabilities and the formatting of competition-compliant outputs.
 
-2. **build_model**
+### 📁 notebooks/
+Contains exploratory Jupyter notebooks (`.ipynb`) used for initial analysis and visualization.
 
-   - Trains and evaluates separate models for Men's and Women's tournaments.
-   - Conducts feature selection, hyperparameter tuning, and final output generation.
+---
+
+## 🚀 Execution Order
+
+To reproduce the model and generate a new submission, follow these steps in order:
+
+1.  **Environment Setup**:
+    Ensure dependencies are installed (managed via `uv` or `pip`).
+    ```bash
+    uv sync
+    ```
+
+2.  **Data Pre-processing**:
+    Run the pre-processing script to generate normalized team stats and matchup datasets.
+    ```bash
+    uv run python scripts/preprocess.py
+    ```
+    *Output*: `output/CombinedSeasonStats.csv`, `output/TournamentDataModel.csv`, `output/RegularDataModel.csv`.
+
+3.  **Model Training & Prediction**:
+    Run the training script to optimize models and generate the final win probabilities.
+    ```bash
+    uv run python scripts/train.py
+    ```
+    *Output*: `output/submission.csv` and specific league prediction files.
 
 ---
 
@@ -40,12 +69,13 @@ Key steps to construct the feature set for training and evaluation:
 
 - Weighted games to emphasize those later in the season.
 - Normalized game stats based on opponent strength and home-court advantage.
-- Created new efficiency metrics from normalized stats.
-- Incorporated end-of-season team ranks for the Men's league (data not avaialble for women's).
+- Created new efficiency metrics from normalized stats (e.g. Offensive/Defensive Efficiency, eFG%, Pace).
+- Incorporated team-level momentum and variance metrics (e.g. NET_EFF Variance, Last 10 Games NET_EFF, Close Game Win Percentage).
+- Proxied Strength of Schedule (SOS) and Conference Strength by aggregating opponent and conference-level efficiencies.
+- Incorporated end-of-season team ranks for the Men's league (data not available for women's).
 - Standardized all features (Z-scaling for game stats, Min-Max scaling for ranks).
+- Selected features dynamically using L1 Regularization to minimize Brier Score.
 - Merged engineered features with historical matchups to create final training and testing datasets.
-
-### Model Creation and Evaluation
 
 Using 2025 regular season data, the model predicts 2025 tournament outcomes. Historical regular season data serves as training, while historical tournament outcomes are used for testing.
 
@@ -62,10 +92,14 @@ Steps to optimize model performance:
 
 ## 📊 Results
 
-At the conclusion of the tournment, the model's Brier Score is **0.15852**. This result is around the 50th percentile on hte leaderboard.
+The model's initial tournament Brier Score was **0.15852**, which placed around the 50th percentile on the leaderboard. Following post-tournament review, several advanced features were integrated to better capture team dynamics (Pace, SOS, Variance, Recency, 3PT Defense). 
 
-- **Context:** In 2023, the winning model had a slightly higher Brier Score, but performance typically declines in later rounds when matchups are more competitive.
-- **Observation:** My model tends to give conservative win probabilities for higher-seeded teams. In a tournament with fewer early upsets, and a very chalk 2nd weekend (only the second time in history all four #1 seeds made the Final Four), this approach underperformed compared to more aggressive predictions. 
+With these final adjustments evaluated on the 2025 hold-out data:
+- **Men's Model:** Improved cross-validated Brier Score to **0.1534**
+- **Women's Model:** Improved cross-validated Brier Score to **0.1763**
+
+- **Context:** In 2023, the winning model had a slightly higher Brier Score, but performance typically declines in later rounds when matchups are more competitive. The new feature set provides a substantial edge.
+- **Observation:** The final iteration model successfully identifies teams with strong recent momentum and high variance, correcting to give less conservative win probabilities for potential upsets compared to the initial model.
 
 ---
 
