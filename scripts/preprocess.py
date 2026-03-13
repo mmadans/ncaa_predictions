@@ -162,11 +162,10 @@ def prepare_modeling_data(stats, final_ranks):
     rs_data = join_matchup_stats(rs_matchups, combined_data, all_features)
     rs_data.to_csv(f'{OUTPUT_PATH}/RegularDataModel.csv', index=False)
 
-    # Deep Learning Combined (Optional Phase 4)
-    rs_data['IsTournament'] = 0
-    tourney_data['IsTournament'] = 1
-    combined_all = pd.concat([rs_data, tourney_data], ignore_index=True)
-    combined_all.to_csv(f'{OUTPUT_PATH}/CombinedAllGames.csv', index=False)
+    # rs_data['IsTournament'] = 0
+    # tourney_data['IsTournament'] = 1
+    # combined_all = pd.concat([rs_data, tourney_data], ignore_index=True)
+    # combined_all.to_csv(f'{OUTPUT_PATH}/CombinedAllGames.csv', index=False)
     
     print("Pre-processing Complete.")
 

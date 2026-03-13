@@ -1,114 +1,85 @@
-# NCAA March Madness 2025 Men's and Women's Predictions
+# NCAA March Madness 2026 Prediction Model
 
-This project was developed for the annual NCAA March Madness competition hosted on [Kaggle](https://www.kaggle.com/competitions/march-machine-learning-mania-2025/overview). The model predicts win probabilities for all possible Division I matchups across both Men's and Women's leagues, evaluated based on real outcomes from the 2025 March Madness tournament. Submissions are scored using Brier Score (the same as Mean Squared Error in this context).
+This repository contains the finalized 2026 NCAA March Madness prediction model for both Men's and Women's leagues. The model is an ensemble of `XGBoost`, `RandomForest`, and `LogisticRegression`, calibrated with Isotonic Regression.
 
-
-## 📂 Input
-
-This repository includes all datasets provided by the competition. While not all datasets were used in the final model, they are included for potential future improvements.
-
-## 📄 Output
-
-The `submission.csv` file contains the final predictions submitted to the competition. It includes two columns:
-
-- `ID`: A concatenation of the season and team IDs for any given matchup (lower TeamID first). Example: "2024\_1101\_1234"
-- `Pred`: A predicted win probability between 0 and 1 for Team 1.
-
-
-## 📘 Project Structure
-
-The project has been refactored into a modular Python-based pipeline for better maintainability and clarity.
-
-### 📁 scripts/
-This directory contains the core logic of the prediction pipeline:
-
-*   **`preprocess.py`**: The primary entry point for data preparation. It orchestrates the entire processing flow, from raw CSV ingestion to feature-ready modeling datasets.
-*   **`train.py`**: The main modeling script. It handles league-specific training (Combined RS+Tourney for Men, Tourney-only for Women), model tuning, ensemble creation, and final prediction generation.
-*   **`data_loader.py`**: Contains utility functions for loading, cleaning, and combining raw NCAA datasets.
-*   **`feature_engineering.py`**: Houses the logic for complex transformations, including weighted averaging, multi-level normalization (opponent and home-court), and efficient rate calculation.
-*   **`model_utils.py`**: Provides helper functions for L1-based feature selection and model performance evaluation (Brier Score analysis).
-*   **`tuner.py`**: Encapsulates the hyperparameter optimization logic using `BayesSearchCV`.
-*   **`predictor.py`**: Manages the generation of win probabilities and the formatting of competition-compliant outputs.
-
-### 📁 notebooks/
-Contains exploratory Jupyter notebooks (`.ipynb`) used for initial analysis and visualization.
+The project is designed to be a streamlined production pipeline, with all developmental, experimental, and mathematical logic preserved in dedicated Jupyter notebooks for transparency and future iteration.
 
 ---
 
-## 🚀 Execution Order
+## 🚀 Quick Start (2026 Execution)
 
-To reproduce the model and generate a new submission, follow these steps in order:
+To generate the final submission when the 2026 tournament data is available:
 
-1.  **Environment Setup**:
-    Ensure dependencies are installed (managed via `uv` or `pip`).
+1.  **Setup Environment**:
     ```bash
     uv sync
     ```
 
-2.  **Data Pre-processing**:
-    Run the pre-processing script to generate normalized team stats and matchup datasets.
+2.  **Run Data Engineering**:
+    Place new datasets in `input/` and run:
     ```bash
     uv run python scripts/preprocess.py
     ```
-    *Output*: `output/CombinedSeasonStats.csv`, `output/TournamentDataModel.csv`, `output/RegularDataModel.csv`.
 
-3.  **Model Training & Prediction**:
-    Run the training script to optimize models and generate the final win probabilities.
+3.  **Train & Predict**:
+    Train the finalized ensembles and generate `output/submission.csv`:
     ```bash
     uv run python scripts/train.py
     ```
-    *Output*: `output/submission.csv` and specific league prediction files.
 
 ---
 
-## 🔧 Methodology
+## 📁 Project Structure
 
-### Feature Engineering
+### 🐍 Production Scripts (`scripts/`)
+These scripts are optimized for the final 2026 run and use the validated configurations from `FINAL_MODEL_CONFIG.md`.
 
-Key steps to construct the feature set for training and evaluation:
+*   **[`preprocess.py`](file:///Users/michael/Documents/Data%20Projects/ncaa_predictions/scripts/preprocess.py)**: Orchestrates data loading, normalization, and modeling dataset creation.
+*   **[`train.py`](file:///Users/michael/Documents/Data%20Projects/ncaa_predictions/scripts/train.py)**: Trains the calibrated voting ensembles using fixed features and hyperparameters.
+*   **[`feature_engineering.py`](file:///Users/michael/Documents/Data%20Projects/ncaa_predictions/scripts/feature_engineering.py)**: Core logic for recency weighting, opponent adjustment, and home-court normalization.
+*   **[`predictor.py`](file:///Users/michael/Documents/Data%20Projects/ncaa_predictions/scripts/predictor.py)**: Generates win probabilities for all possible matchups with post-prediction adjustments (e.g., 1-seed boosting).
 
-- Weighted games to emphasize those later in the season.
-- Normalized game stats based on opponent strength and home-court advantage.
-- Created new efficiency metrics from normalized stats (e.g. Offensive/Defensive Efficiency, eFG%, Pace).
-- Incorporated team-level momentum and variance metrics (e.g. NET_EFF Variance, Last 10 Games NET_EFF, Close Game Win Percentage).
-- Proxied Strength of Schedule (SOS) and Conference Strength by aggregating opponent and conference-level efficiencies.
-- Incorporated end-of-season team ranks for the Men's league (data not available for women's).
-- Standardized all features (Z-scaling for game stats, Min-Max scaling for ranks).
-- Selected features dynamically using L1 Regularization to minimize Brier Score.
-- Merged engineered features with historical matchups to create final training and testing datasets.
+### 📓 Development Notebooks (`notebooks/`)
+Experimental logic and historical developmental processes are documented here:
+*   **[`feature_engineering.ipynb`](file:///Users/michael/Documents/Data%20Projects/ncaa_predictions/notebooks/feature_engineering.ipynb)**: Detailed mathematical breakdown of the normalization and weighting logic.
+*   **[`model_comparisons.ipynb`](file:///Users/michael/Documents/Data%20Projects/ncaa_predictions/notebooks/model_comparisons.ipynb)**: Feature importance analysis (L1 coefficients) and Brier Score comparisons across different architectures.
+*   **[`hyper_parameter_tuning.ipynb`](file:///Users/michael/Documents/Data%20Projects/ncaa_predictions/notebooks/hyper_parameter_tuning.ipynb)**: Bayesian optimization logic used to find the final model parameters.
 
-Using 2025 regular season data, the model predicts 2025 tournament outcomes. Historical regular season data serves as training, while historical tournament outcomes are used for testing.
-
-- **Men's Model:** `XGBoost` provided the best performance.
-- **Women's Model:** `LogisticRegression` from `scikit-learn` performed best.
-
-Steps to optimize model performance:
-
-1. **Feature Selection:** Used chi-squared tests to select significant features, minimizing Brier Score.
-2. **Hyperparameter Tuning:** Applied `BayesSearchCV` from `scikit-optimize` to refine model parameters.
-3. **Final Prediction:** Trained the optimized model to predict outcomes for all potential 2025 matchups.
+### 📄 Configuration
+*   **[`FINAL_MODEL_CONFIG.md`](file:///Users/michael/Documents/Data%20Projects/ncaa_predictions/FINAL_MODEL_CONFIG.md)**: The authoritative source for feature lists, model weights, and post-prediction overrides.
 
 ---
 
-## 📊 Results
+## 🧠 Model Architecture
 
-The model's initial tournament Brier Score was **0.15852**, which placed around the 50th percentile on the leaderboard. Following post-tournament review, several advanced features were integrated to better capture team dynamics (Pace, SOS, Variance, Recency, 3PT Defense). 
+### 1. Feature Engineering
+- **Recency Weighting**: Linearly emphasizes games later in the season ($Weight = 1 + \frac{DayNum}{MaxDayNum}$).
+- **Normalization**: Adjusted for opponent defensive/offensive strength and removed home-court variance.
+- **Advanced Metrics**: Offensive/Defensive Efficiency (points per possession), eFG%, and net efficiency trends.
 
-With these final adjustments evaluated on the 2025 hold-out data:
-- **Men's Model:** Improved cross-validated Brier Score to **0.1534**
-- **Women's Model:** Improved cross-validated Brier Score to **0.1763**
+### 2. Modeling Strategy
+We use a **Soft Voting Ensemble** of three base models:
+- **XGBoost**: Captures non-linearities and high-variance upsets.
+- **Logistic Regression**: Provides stability and baseline linear relationships.
+- **Random Forest**: Aggregates variance and reduces overfitting.
 
-- **Context:** In 2023, the winning model had a slightly higher Brier Score, but performance typically declines in later rounds when matchups are more competitive. The new feature set provides a substantial edge.
-- **Observation:** The final iteration model successfully identifies teams with strong recent momentum and high variance, correcting to give less conservative win probabilities for potential upsets compared to the initial model.
+**Calibration**: All ensemble outputs are transformed using `CalibratedClassifierCV` (Isotonic Regression) to ensure probabilities are reliable for Brier Score optimization.
+
+### 3. League-Specific Adjustments
+- **Men's Model**: Weighted towards XGBoost (2:1:1) to handle the higher frequency of large-scale upsets.
+- **Women's Model**: Weighted towards Logistic Regression (1:2:1) due to the higher historical predictability of top seeds.
 
 ---
 
-## 🔎 Next Steps
+## 📊 2025 Holdout Performance
+| League | Brier Score |
+| :--- | :--- |
+| **Men's** | **0.1509** |
+| **Women's** | **0.1650** |
 
-To improve the model for future competitions:
+---
 
-- Integrate official tournament seeding alongside end-of-season rankings.
-- Incorporate coaching experience and track record.
-- Analyze macro-level trends across seasons to identify years more prone to upsets and adjust predictions accordingly.
-
-I had a great experience building this model and plan to refine it for future March Madness competitions!
+## 🔎 Future Improvements
+- Integrate coaching track records and historical "upset-prone" profiles.
+- Incorporate player-level injury data and transfer portal impacts.
+- Explore deeper neural network architectures (MLP/Transformer) using the data preparation logic in `notebooks/feature_engineering.ipynb`.

@@ -8,8 +8,6 @@ from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.calibration import CalibratedClassifierCV
 from xgboost import XGBClassifier
 
-from model_utils import feature_select_stats, evaluate_model
-from tuner import tune_models
 from predictor import final_predictions
 
 warnings.simplefilter(action="ignore", category=RuntimeWarning)
@@ -30,32 +28,26 @@ def train_mens_model(tourney_data, rs_data):
     tourney_history_m = tourney_data[(tourney_data['League'] == 'M') & (tourney_data['Season'] < 2025)]
     train_data_m = pd.concat([rs_history_m, tourney_history_m], ignore_index=True).fillna(0)
     
+    # Features from FINAL_MODEL_CONFIG.md
     features = [
         'Seed', 'Seed_Diff_Squared', 'Score', 'Score_against', 'FGper', 'FG3per', 'FTper', 
-        'FGper_against', 'FG3per_against', 'FTper_against', "OEFF", "DEFF", "NET_EFF", 
-        "eFG", "TS", "ORper", "DRper", "TOper", "AST_TO", "3P_Reliance", "3P_Reliance_against", "3P_Defense", "FTR", "STLper", 
-        "Pace", "Score_Variance", "NET_EFF_Variance", "Close_Game_Win_Per", "NET_EFF_Last_10", "Opp_OEFF", "Opp_DEFF", "Conf_NET_EFF", "avg_rank"
+        'FGper_against', 'FG3per_against', 'FTper_against', 'OEFF', 'DEFF', 'NET_EFF', 
+        'eFG', 'TS', 'ORper', 'DRper', 'TOper', 'AST_TO', '3P_Reliance', '3P_Reliance_against', 
+        '3P_Defense', 'FTR', 'STLper', 'Pace', 'Score_Variance', 'NET_EFF_Variance', 
+        'Close_Game_Win_Per', 'NET_EFF_Last_10', 'Opp_OEFF', 'Opp_DEFF', 'Conf_NET_EFF', 'avg_rank'
     ]
 
-    # 2. Feature Selection
-    baseline_xgb = XGBClassifier(n_estimators=100, learning_rate=0.05, max_depth=6, random_state=42)
-    best_features = feature_select_stats(train_data_m, tourney_data_m, features, baseline_xgb)
-
-    X_train = train_data_m[best_features]
+    X_train = train_data_m[features]
     y_train = train_data_m['Pred']
-    X_test = tourney_data_m[best_features]
+    X_test = tourney_data_m[features]
     y_test = tourney_data_m['Pred']
 
-    # 3. Hyperparameter Tuning
-    print("\nStarting Hyperparameter Tuning...")
-    best_models_m = tune_models(train_data_m, best_features)
-    
-    tuned_xgb = best_models_m['xgb']
-    tuned_lr = best_models_m['lr']
-    tuned_rf = best_models_m['rf']
+    # 4. Ensemble and Calibration (Fixed Weights)
+    xgb = XGBClassifier(n_estimators=100, learning_rate=0.05, max_depth=6, random_state=42)
+    lr = LogisticRegression(solver='liblinear', random_state=42)
+    rf = RandomForestClassifier(n_estimators=100, random_state=42)
 
-    # 4. Ensemble and Calibration
-    models = [('xgb', tuned_xgb), ('lr', tuned_lr), ('rf', tuned_rf)]
+    models = [('xgb', xgb), ('lr', lr), ('rf', rf)]
     ensemble = VotingClassifier(estimators=models, voting='soft', weights=[2, 1, 1])
     ensemble.fit(X_train, y_train)
 
@@ -67,7 +59,7 @@ def train_mens_model(tourney_data, rs_data):
     score = brier_score_loss(y_test, probs)
     print(f"Men's Calibrated Ensemble Brier Score: {score:.4f}")
 
-    return calibrated_ensemble, best_features
+    return calibrated_ensemble, features
 
 def train_womens_model(tourney_data):
     """
@@ -79,33 +71,25 @@ def train_womens_model(tourney_data):
     tourney_data_w = tourney_data[(tourney_data['League'] == 'W') & (tourney_data['Season'] == 2025)].fillna(0)
     train_data_w = tourney_data[(tourney_data['League'] == 'W') & (tourney_data['Season'] < 2025)].fillna(0)
     
+    # Features from FINAL_MODEL_CONFIG.md
     features = [
         'Seed', 'Seed_Diff_Squared', 'Score', 'Score_against', 'FGper', 'FG3per', 'FTper', 
-        'FGper_against', 'FG3per_against', 'FTper_against', "OEFF", "DEFF", "NET_EFF", 
-        "eFG", "TS", "ORper", "DRper", "TOper", "AST_TO", "3P_Reliance", "3P_Reliance_against", "3P_Defense", "FTR", "STLper",
-        "Pace", "Score_Variance", "NET_EFF_Variance", "Close_Game_Win_Per", "NET_EFF_Last_10", "Opp_OEFF", "Opp_DEFF", "Conf_NET_EFF"
+        'FGper_against', 'FTper_against', 'DEFF', 'DRper', 'TOper', 'AST_TO', '3P_Reliance', 
+        'FTR', 'STLper', 'Pace', 'Score_Variance', 'Close_Game_Win_Per', 'NET_EFF_Last_10', 'Conf_NET_EFF'
     ]
 
-    # 2. Feature Selection
-    baseline_lr = LogisticRegression(solver='liblinear', random_state=42)
-    best_features = feature_select_stats(train_data_w, tourney_data_w, features, baseline_lr)
-
-    X_train = train_data_w[best_features]
+    X_train = train_data_w[features]
     y_train = train_data_w['Pred']
-    X_test = tourney_data_w[best_features]
+    X_test = tourney_data_w[features]
     y_test = tourney_data_w['Pred']
 
-    # 3. Hyperparameter Tuning
-    print("\nStarting Hyperparameter Tuning...")
-    best_models_w = tune_models(train_data_w, best_features)
-    
-    tuned_xgb = best_models_w['xgb']
-    tuned_lr = best_models_w['lr']
-    tuned_rf = best_models_w['rf']
+    # 4. Ensemble and Calibration (Fixed Weights)
+    xgb = XGBClassifier(n_estimators=100, learning_rate=0.05, max_depth=6, random_state=42)
+    lr = LogisticRegression(solver='liblinear', random_state=42)
+    rf = RandomForestClassifier(n_estimators=100, random_state=42)
 
-    # 4. Ensemble and Calibration
-    models = [('xgb', tuned_xgb), ('lr', tuned_lr), ('rf', tuned_rf)]
-    ensemble = VotingClassifier(estimators=models, voting='soft', weights=[1, 2, 1]) # Women's model tends to prefer LR
+    models = [('xgb', xgb), ('lr', lr), ('rf', rf)]
+    ensemble = VotingClassifier(estimators=models, voting='soft', weights=[1, 2, 1]) 
     ensemble.fit(X_train, y_train)
 
     calibrated_ensemble = CalibratedClassifierCV(ensemble, method='isotonic', cv=3)
@@ -116,7 +100,7 @@ def train_womens_model(tourney_data):
     score = brier_score_loss(y_test, probs)
     print(f"Women's Calibrated Ensemble Brier Score: {score:.4f}")
 
-    return calibrated_ensemble, best_features
+    return calibrated_ensemble, features
 
 def main():
     """
