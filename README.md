@@ -57,7 +57,16 @@ Experimental logic and historical developmental processes are documented here:
 - **Normalization**: Adjusted for opponent defensive/offensive strength and removed home-court variance.
 - **Advanced Metrics**: Offensive/Defensive Efficiency (points per possession), eFG%, and net efficiency trends.
 
-### 2. Modeling Strategy
+### 2. Final Feature Lists
+The models utilize different feature sets optimized during the L1 regularization phase.
+
+**Men's Model Features:**
+`Seed`, `Seed_Diff_Squared`, `Score`, `Score_against`, `FGper`, `FG3per`, `FTper`, `FGper_against`, `FG3per_against`, `FTper_against`, `OEFF`, `DEFF`, `NET_EFF`, `eFG`, `TS`, `ORper`, `DRper`, `TOper`, `AST_TO`, `3P_Reliance`, `3P_Reliance_against`, `3P_Defense`, `FTR`, `STLper`, `Pace`, `Score_Variance`, `NET_EFF_Variance`, `Close_Game_Win_Per`, `NET_EFF_Last_10`, `Opp_OEFF`, `Opp_DEFF`, `Conf_NET_EFF`, `avg_rank`
+
+**Women's Model Features:**
+`Seed`, `Seed_Diff_Squared`, `Score`, `Score_against`, `FGper`, `FG3per`, `FTper`, `FGper_against`, `FTper_against`, `DEFF`, `DRper`, `TOper`, `AST_TO`, `3P_Reliance`, `FTR`, `STLper`, `Pace`, `Score_Variance`, `Close_Game_Win_Per`, `NET_EFF_Last_10`, `Conf_NET_EFF`
+
+### 3. Modeling Strategy
 We use a **Soft Voting Ensemble** of three base models:
 - **XGBoost**: Captures non-linearities and high-variance upsets.
 - **Logistic Regression**: Provides stability and baseline linear relationships.
