@@ -170,3 +170,12 @@ cython_debug/
 # Input / Output
 output/
 input/
+
+output/bracket_helper_m.csv
+output/bracket_helper_m.xlsx
+output/bracket_helper_w.csv
+output/bracket_helper_w.xlsx
+output/betting_value_m.csv
+output/betting_value_w.csv
+scripts/generate_bracket_helper.py
+scripts/betting_value_finder.py

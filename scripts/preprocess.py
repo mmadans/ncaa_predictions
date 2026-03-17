@@ -148,7 +148,7 @@ def prepare_modeling_data(stats, final_ranks):
     mens_t = pd.read_csv(f'{INPUT_PATH}/MNCAATourneyCompactResults.csv')
     womens_t = pd.read_csv(f'{INPUT_PATH}/WNCAATourneyCompactResults.csv')
     tourney_results = combine_data(mens_t, womens_t)
-    tourney_results = tourney_results[(tourney_results["Season"] >= 2003) & (tourney_results["Season"] <= 2025)]
+    tourney_results = tourney_results[(tourney_results["Season"] >= 2003) & (tourney_results["Season"] <= 2026)]
     tourney_matchups = create_matchups(tourney_results)
     tourney_data = join_matchup_stats(tourney_matchups, combined_data, all_features)
     tourney_data.to_csv(f'{OUTPUT_PATH}/TournamentDataModel.csv', index=False)
@@ -157,7 +157,7 @@ def prepare_modeling_data(stats, final_ranks):
     mens_rs = pd.read_csv(f'{INPUT_PATH}/MRegularSeasonCompactResults.csv')
     womens_rs = pd.read_csv(f'{INPUT_PATH}/WRegularSeasonCompactResults.csv')
     rs_results = combine_data(mens_rs, womens_rs)
-    rs_results = rs_results[(rs_results["Season"] >= 2003) & (rs_results["Season"] <= 2025)]
+    rs_results = rs_results[(rs_results["Season"] >= 2003) & (rs_results["Season"] <= 2026)]
     rs_matchups = create_matchups(rs_results)
     rs_data = join_matchup_stats(rs_matchups, combined_data, all_features)
     rs_data.to_csv(f'{OUTPUT_PATH}/RegularDataModel.csv', index=False)

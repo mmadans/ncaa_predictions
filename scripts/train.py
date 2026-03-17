@@ -23,10 +23,13 @@ def train_mens_model(tourney_data, rs_data):
     print("\n--- Training Men's Model ---")
     
     # 1. Dataset Preparation
-    tourney_data_m = tourney_data[(tourney_data['League'] == 'M') & (tourney_data['Season'] == 2025)].fillna(0)
-    rs_history_m = rs_data[(rs_data['League'] == 'M') & (rs_data['Season'] < 2025)]
+    # Training: All RS (up to 2026) + All Tourney (up to 2024)
+    # Validation: 2025 Tourney
+    rs_history_m = rs_data[rs_data['League'] == 'M'] # Includes 2026
     tourney_history_m = tourney_data[(tourney_data['League'] == 'M') & (tourney_data['Season'] < 2025)]
     train_data_m = pd.concat([rs_history_m, tourney_history_m], ignore_index=True).fillna(0)
+    
+    tourney_data_m_val = tourney_data[(tourney_data['League'] == 'M') & (tourney_data['Season'] == 2025)].fillna(0)
     
     # Features from FINAL_MODEL_CONFIG.md
     features = [
@@ -39,8 +42,8 @@ def train_mens_model(tourney_data, rs_data):
 
     X_train = train_data_m[features]
     y_train = train_data_m['Pred']
-    X_test = tourney_data_m[features]
-    y_test = tourney_data_m['Pred']
+    X_val = tourney_data_m_val[features]
+    y_val = tourney_data_m_val['Pred']
 
     # 4. Ensemble and Calibration (Fixed Weights)
     xgb = XGBClassifier(n_estimators=100, learning_rate=0.05, max_depth=6, random_state=42)
@@ -54,22 +57,27 @@ def train_mens_model(tourney_data, rs_data):
     calibrated_ensemble = CalibratedClassifierCV(ensemble, method='isotonic', cv=3)
     calibrated_ensemble.fit(X_train, y_train)
 
-    # 5. Evaluation
-    probs = calibrated_ensemble.predict_proba(X_test)[:, 1]
-    score = brier_score_loss(y_test, probs)
-    print(f"Men's Calibrated Ensemble Brier Score: {score:.4f}")
+    # 5. Evaluation (on 2025 Tournament)
+    probs = calibrated_ensemble.predict_proba(X_val)[:, 1]
+    score = brier_score_loss(y_val, probs)
+    print(f"Men's Calibrated Ensemble Brier Score (2025 Validation): {score:.4f}")
 
     return calibrated_ensemble, features
 
-def train_womens_model(tourney_data):
+def train_womens_model(tourney_data, rs_data):
     """
     Trains and calibrates the Women's league model using Tourney-only data.
     """
     print("\n--- Training Women's Model ---")
     
     # 1. Dataset Preparation
-    tourney_data_w = tourney_data[(tourney_data['League'] == 'W') & (tourney_data['Season'] == 2025)].fillna(0)
-    train_data_w = tourney_data[(tourney_data['League'] == 'W') & (tourney_data['Season'] < 2025)].fillna(0)
+    # Training: Tourney (up to 2024) + RS (including 2026 - joining if needed, but per original logic it used tourney-only)
+    # Let's add RS data for Women as well to follow the user request for 2026 historical data inclusion
+    rs_history_w = rs_data[rs_data['League'] == 'W'] # Includes 2026
+    tourney_history_w = tourney_data[(tourney_data['League'] == 'W') & (tourney_data['Season'] < 2025)]
+    train_data_w = pd.concat([rs_history_w, tourney_history_w], ignore_index=True).fillna(0)
+    
+    tourney_data_w_val = tourney_data[(tourney_data['League'] == 'W') & (tourney_data['Season'] == 2025)].fillna(0)
     
     # Features from FINAL_MODEL_CONFIG.md
     features = [
@@ -80,8 +88,8 @@ def train_womens_model(tourney_data):
 
     X_train = train_data_w[features]
     y_train = train_data_w['Pred']
-    X_test = tourney_data_w[features]
-    y_test = tourney_data_w['Pred']
+    X_val = tourney_data_w_val[features]
+    y_val = tourney_data_w_val['Pred']
 
     # 4. Ensemble and Calibration (Fixed Weights)
     xgb = XGBClassifier(n_estimators=100, learning_rate=0.05, max_depth=6, random_state=42)
@@ -95,10 +103,10 @@ def train_womens_model(tourney_data):
     calibrated_ensemble = CalibratedClassifierCV(ensemble, method='isotonic', cv=3)
     calibrated_ensemble.fit(X_train, y_train)
 
-    # 5. Evaluation
-    probs = calibrated_ensemble.predict_proba(X_test)[:, 1]
-    score = brier_score_loss(y_test, probs)
-    print(f"Women's Calibrated Ensemble Brier Score: {score:.4f}")
+    # 5. Evaluation (on 2025 Tournament)
+    probs = calibrated_ensemble.predict_proba(X_val)[:, 1]
+    score = brier_score_loss(y_val, probs)
+    print(f"Women's Calibrated Ensemble Brier Score (2025 Validation): {score:.4f}")
 
     return calibrated_ensemble, features
 
@@ -113,16 +121,18 @@ def main():
 
     # 2. Train Models
     model_m, features_m = train_mens_model(tourney_data, rs_data)
-    model_w, features_w = train_womens_model(tourney_data)
+    model_w, features_w = train_womens_model(tourney_data, rs_data)
 
-    # 3. Generate Predictions
-    print("\nGenerating Predictions...")
+    # 3. Generate Predictions (Final for all 2026 D1 teams)
+    print("\nGenerating Predictions for All Possible 2026 Matchups...")
     teams_m = pd.read_csv(f'{INPUT_PATH}/MTeams.csv')
-    teams_m = teams_m[teams_m["LastD1Season"] >= 2025] 
+    teams_m = teams_m[teams_m["LastD1Season"] == 2026] 
     pred_m = final_predictions(teams_m, combined_stats.fillna(0), 2026, features_m, model_m, correction=0.05, boost_1_seeds=True, boost_high_conf=True, round_extremes=False)
     pred_m.to_csv(f'{OUTPUT_PATH}/final_predictions_m.csv', index=False)
 
     teams_w = pd.read_csv(f'{INPUT_PATH}/WTeams.csv')
+    active_w_teams = combined_stats[(combined_stats["League"] == "W") & (combined_stats["Season"] == 2026)]["TeamId"].unique()
+    teams_w = teams_w[teams_w["TeamID"].isin(active_w_teams)]
     pred_w = final_predictions(teams_w, combined_stats.fillna(0), 2026, features_w, model_w, correction=0, boost_1_seeds=True, boost_high_conf=True, round_extremes=False)
     pred_w.to_csv(f'{OUTPUT_PATH}/final_predictions_w.csv', index=False)
 
