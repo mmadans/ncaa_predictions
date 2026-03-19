@@ -50,20 +50,20 @@ def final_predictions(teams, stats, season, features, model, correction=0, boost
     team_stats["Pred"] = predictions
     
     if boost_1_seeds:
-        # Boost probabilities for 1 vs 16 seed matchups by 10%
-        # First team is 1 seed, second is 16 seed (boost Pred by 0.10)
-        team_stats.loc[(team_stats['RawSeed_first'] == 1) & (team_stats['RawSeed_second'] == 16), "Pred"] += 0.10
-        # First team is 16 seed, second is 1 seed (boost Pred by -0.10)
-        team_stats.loc[(team_stats['RawSeed_first'] == 16) & (team_stats['RawSeed_second'] == 1), "Pred"] -= 0.10
+        # Boost probabilities for 1 vs 16 seed matchups by 5% (reduced from 10%)
+        # First team is 1 seed, second is 16 seed (boost Pred by 0.05)
+        team_stats.loc[(team_stats['RawSeed_first'] == 1) & (team_stats['RawSeed_second'] == 16), "Pred"] += 0.05
+        # First team is 16 seed, second is 1 seed (boost Pred by -0.05)
+        team_stats.loc[(team_stats['RawSeed_first'] == 16) & (team_stats['RawSeed_second'] == 1), "Pred"] -= 0.05
         
         # Ensure probabilities remain bounded between 0 and 1
         team_stats["Pred"] = team_stats["Pred"].clip(0.0, 1.0)
         
     if boost_high_conf:
-        # Boost confidence for >80% implicitly favoring the favorite. 
+        # Boost confidence for >85% implicitly favoring the favorite by 2.5% (reduced from 80% threshold, 5% boost). 
         # But we must clip values!
-        team_stats.loc[team_stats["Pred"] > 0.80, "Pred"] += 0.05
-        team_stats.loc[team_stats["Pred"] < 0.20, "Pred"] -= 0.05
+        team_stats.loc[team_stats["Pred"] > 0.85, "Pred"] += 0.025
+        team_stats.loc[team_stats["Pred"] < 0.15, "Pred"] -= 0.025
         team_stats["Pred"] = team_stats["Pred"].clip(0.0, 1.0)
         
     if round_extremes:

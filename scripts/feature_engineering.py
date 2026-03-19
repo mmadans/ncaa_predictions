@@ -181,13 +181,26 @@ def calculate_team_level_features(df):
     ).reset_index()
     
     # SOS (Strength of Schedule) -> average of opponents' season-long OEFF and DEFF.
-    # We will just take the average OEFF and DEFF of the teams they played against in the game-level data.
-    # Note: A true SOS requires knowing the opponent's average for the season, but computing the average of OEFF_against 
-    # and DEFF_against from the game stats serves as a proxy for the defensive/offensive strength of the schedule.
-    # An opponent's offensive efficiency is simply the team's defensive efficiency (DEFF), and vice-versa.
+    # Calculate Season-long OEFF and DEFF for each team
+    team_season_eff = temp_df.groupby(['League', 'Season', 'TeamId']).agg(
+        Season_OEFF=('OEFF', 'mean'),
+        Season_DEFF=('DEFF', 'mean')
+    ).reset_index()
+    
+    # Merge opponent's season-long efficiency into the game log
+    temp_df = temp_df.merge(
+        team_season_eff.rename(columns={'TeamId': 'TeamId_against', 'Season_OEFF': 'Opp_Season_OEFF', 'Season_DEFF': 'Opp_Season_DEFF'}),
+        on=['League', 'Season', 'TeamId_against'],
+        how='left'
+    )
+    
+    # Calculate SOS based on the opponents' season averages
+    # Re-group since temp_df has changed
+    grouped = temp_df.groupby(["League", "Season", "TeamId"])
+    
     sos = grouped.agg(
-        Opp_OEFF=('DEFF', 'mean'), # opponents' offensive efficiency in those games
-        Opp_DEFF=('OEFF', 'mean')  # opponents' defensive efficiency in those games
+        Opp_OEFF=('Opp_Season_OEFF', 'mean'),
+        Opp_DEFF=('Opp_Season_DEFF', 'mean')
     ).reset_index()
 
     # Matchup against base

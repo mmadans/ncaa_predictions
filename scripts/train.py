@@ -59,8 +59,24 @@ def train_mens_model(tourney_data, rs_data):
 
     # 5. Evaluation (on 2025 Tournament)
     probs = calibrated_ensemble.predict_proba(X_val)[:, 1]
-    score = brier_score_loss(y_val, probs)
-    print(f"Men's Calibrated Ensemble Brier Score (2025 Validation): {score:.4f}")
+    
+    score_unboosted = brier_score_loss(y_val, probs)
+    print(f"Men's Calibrated Ensemble Brier Score (Unboosted, 2025 Validation): {score_unboosted:.4f}")
+    
+    # Apply manual boosting for comparison
+    val_df = tourney_data_m_val.copy()
+    val_df['Pred'] = probs
+    if 'RawSeed_first' in val_df.columns:
+        val_df.loc[(val_df['RawSeed_first'] == 1) & (val_df['RawSeed_second'] == 16), "Pred"] += 0.05
+        val_df.loc[(val_df['RawSeed_first'] == 16) & (val_df['RawSeed_second'] == 1), "Pred"] -= 0.05
+    
+    val_df['Pred'] = val_df['Pred'].clip(0.0, 1.0)
+    val_df.loc[val_df['Pred'] > 0.85, "Pred"] += 0.025
+    val_df.loc[val_df['Pred'] < 0.15, "Pred"] -= 0.025
+    val_df['Pred'] = val_df['Pred'].clip(0.0, 1.0)
+    
+    score_boosted = brier_score_loss(y_val, val_df['Pred'])
+    print(f"Men's Calibrated Ensemble Brier Score (Boosted, 2025 Validation): {score_boosted:.4f}")
 
     return calibrated_ensemble, features
 
@@ -105,8 +121,23 @@ def train_womens_model(tourney_data, rs_data):
 
     # 5. Evaluation (on 2025 Tournament)
     probs = calibrated_ensemble.predict_proba(X_val)[:, 1]
-    score = brier_score_loss(y_val, probs)
-    print(f"Women's Calibrated Ensemble Brier Score (2025 Validation): {score:.4f}")
+    score_unboosted = brier_score_loss(y_val, probs)
+    print(f"Women's Calibrated Ensemble Brier Score (Unboosted, 2025 Validation): {score_unboosted:.4f}")
+    
+    # Apply manual boosting for comparison
+    val_df = tourney_data_w_val.copy()
+    val_df['Pred'] = probs
+    if 'RawSeed_first' in val_df.columns:
+        val_df.loc[(val_df['RawSeed_first'] == 1) & (val_df['RawSeed_second'] == 16), "Pred"] += 0.05
+        val_df.loc[(val_df['RawSeed_first'] == 16) & (val_df['RawSeed_second'] == 1), "Pred"] -= 0.05
+    
+    val_df['Pred'] = val_df['Pred'].clip(0.0, 1.0)
+    val_df.loc[val_df['Pred'] > 0.85, "Pred"] += 0.025
+    val_df.loc[val_df['Pred'] < 0.15, "Pred"] -= 0.025
+    val_df['Pred'] = val_df['Pred'].clip(0.0, 1.0)
+    
+    score_boosted = brier_score_loss(y_val, val_df['Pred'])
+    print(f"Women's Calibrated Ensemble Brier Score (Boosted, 2025 Validation): {score_boosted:.4f}")
 
     return calibrated_ensemble, features
 
